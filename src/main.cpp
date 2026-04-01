@@ -30,7 +30,7 @@ namespace Config {
     //constexpr std::string_view Ssid     = "ASI Personal";
     //constexpr std::string_view Password = "Personal@AcceleratedSystems";
 
-    // RPi Network
+    // RPi Network (192.168.4.11)
     constexpr std::string_view Ssid     = "ESP32test-network";
     constexpr std::string_view Password = "esp32test123";
 }
@@ -88,8 +88,8 @@ void setup() {
     initWiFi();
 
     // Setup Web Server Routes
-    server.on("/", handleRoot); // When someone visits http://[IP]/, call handleRoot
-    server.on("/reset", handleReset); // Route for the reset button
+    server.on("/", handleRoot);         // When someone visits http://192.168.4.11/, call handleRoot
+    server.on("/reset", handleReset);   // Route for the reset button
     server.begin();
     Serial.println("HTTP Server Started.");
 
