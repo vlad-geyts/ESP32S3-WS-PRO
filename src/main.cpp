@@ -52,6 +52,9 @@ void heartbeatTask(void* pvParameters);
 void serverTask(void* pvParameters);    // Task to handle incoming web requests
 void initWiFi();
 void handleRoot();                      // Function that serves the HTML page
+void handleReset();                     // New function to clear NVS
+// Helper function to determine signal color based on RSSI
+std::string_view getSignalColor(int rssi);  
 
 void setup() {
     delay(1000);
@@ -86,6 +89,7 @@ void setup() {
 
     // Setup Web Server Routes
     server.on("/", handleRoot); // When someone visits http://[IP]/, call handleRoot
+    server.on("/reset", handleReset); // Route for the reset button
     server.begin();
     Serial.println("HTTP Server Started.");
 
@@ -129,19 +133,84 @@ void setup() {
 // The Linker needs this function to exist, even if it is never called.
 void loop() {}
 
-// --- C++17 Logic: HTML Generation ---
+// Helper function to determine signal color based on RSSI
+std::string_view getSignalColor(int rssi) {
+    if (rssi > -60) return "#4caf50"; // Green (Strong)
+    if (rssi > -80) return "#ff9800"; // Orange (Okay)
+    return "#f44336";                // Red (Weak)
+}
+
+// --- New Function: Handle Reset ---
+void handleReset() {
+    Serial.println("[Web] Reset request received. Clearing NVS...");
+    prefs.begin("system", false); // Open in R/W mode
+    prefs.clear();               // Removes all keys in the "system" namespace
+    prefs.end();
+    
+    // Redirect the browser back to the root page after resetting
+    server.sendHeader("Location", "/");
+    server.send(303); 
+}
+
+// --- Updated handleRoot with CSS Button ---
 void handleRoot() {
     prefs.begin("system", true);
     auto count = prefs.getUInt("panic_count", 0);
     prefs.end();
 
-    // std::string (C++17) makes building HTML much cleaner than char arrays
-    std::string html = "<html><head><meta http-equiv='refresh' content='2'></head>";
-    html += "<body style='font-family: sans-serif; text-align: center;'>";
-    html += "<h1>ESP32-S3 Logic Monitor</h1>";
-    html += "<div style='font-size: 2em; color: red;'>Panic Count: " + std::to_string(count) + "</div>";
-    html += "<p>WiFi Signal: " + std::to_string(WiFi.RSSI()) + " dBm</p>";
-    html += "</body></html>";
+    int rssi = WiFi.RSSI();
+    auto signalColor = getSignalColor(rssi);
+
+    // Using C++ Raw String Literal for the UI
+    std::string html = R"=====(
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <meta http-equiv='refresh' content='5'>
+        <title>S3 Dashboard</title>
+        <style>
+            body { font-family: 'Segoe UI', sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+            .container { width: 90%; max-width: 400px; text-align: center; }
+            .card { background: #1e1e1e; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.4); border-top: 4px solid #00adb5; }
+            h1 { color: #00adb5; font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 30px; }
+            .label { font-size: 0.8rem; color: #757575; text-transform: uppercase; }
+            .value { font-size: 3.5rem; font-weight: bold; margin: 10px 0; color: #ffffff; }
+            .btn-reset { display: inline-block; background-color: #ff4b2b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px; transition: 0.3s; }
+            .btn-reset:hover { background-color: #ff1f00; scale: 1.05; }
+            .footer { font-size: 0.7rem; color: #444; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <h1>CORE MONITOR v1.0</h1>
+            
+            <div class='card' style='border-top-color: #ff4b2b;'>
+                <div class='label'>Panic Events</div>
+                <div class='value'>)=====";
+    
+    html += std::to_string(count);
+    
+    html += R"=====(</div>
+                <a href='/reset' class='btn-reset' onclick="return confirm('Clear lifetime logs?')">RESET COUNTER</a>
+            </div>
+
+            <div class='card' style='border-top-color: )=====";
+    html += signalColor;
+    html += R"=====(;'>
+                <div class='label'>RSSI Strength</div>
+                <div class='value' style='font-size: 2.5rem;'>)=====";
+    html += std::to_string(rssi);
+    html += R"=====( <span style='font-size: 1rem;'>dBm</span></div>
+            </div>
+            
+            <div class='footer'>ESP32-S3 | Uptime: )=====";
+    html += std::to_string(millis() / 1000);
+    html += R"=====(s</div>
+        </div>
+    </body>
+    </html>
+    )=====";
 
     server.send(200, "text/html", html.c_str());
 }
