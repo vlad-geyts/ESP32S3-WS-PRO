@@ -178,7 +178,7 @@ void handleRoot() {
             .value { font-size: 3.5rem; font-weight: bold; margin: 10px 0; color: #ffffff; }
             .btn-reset { display: inline-block; background-color: #ff4b2b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px; transition: 0.3s; }
             .btn-reset:hover { background-color: #ff1f00; scale: 1.05; }
-            .footer { font-size: 0.7rem; color: #444; margin-top: 20px; }
+            .footer { font-size: 0.7rem; color: #f9f970; margin-top: 20px; }
         </style>
     </head>
     <body>
