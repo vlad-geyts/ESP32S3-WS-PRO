@@ -33,6 +33,10 @@ namespace Config {
     // RPi Network (192.168.4.11)
     constexpr std::string_view Ssid     = "ESP32test-network";
     constexpr std::string_view Password = "esp32test123";
+
+    // Login to reset "Panic Counter"
+    constexpr char* www_username = "admin";
+    constexpr char* www_password = "password123";
 }
 
 // Global Objects
@@ -142,12 +146,16 @@ std::string_view getSignalColor(int rssi) {
 
 // --- New Function: Handle Reset ---
 void handleReset() {
-    Serial.println("[Web] Reset request received. Clearing NVS...");
-    prefs.begin("system", false); // Open in R/W mode
-    prefs.clear();               // Removes all keys in the "system" namespace
+    // This line triggers the browser's native login popup
+    if (!server.authenticate(Config::www_username, Config::www_password)) {
+        return server.requestAuthentication();
+    }
+
+    Serial.println("[Web] Authorized Reset request. Clearing NVS...");
+    prefs.begin("system", false);
+    prefs.clear();
     prefs.end();
     
-    // Redirect the browser back to the root page after resetting
     server.sendHeader("Location", "/");
     server.send(303); 
 }
