@@ -11,6 +11,9 @@
 #include <string_view>    // C++17 header for high-performance string handling
                           // Just to data members: a pointer and a length. 
                           // Does not created a copy in memory. Read-only.
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1351.h>
+#include <SPI.h>
 
 // --- Modern C++: Namespaces & Constexpr ---
 // We use a namespace to group related constants. This prevents "LED_PIN" from 
@@ -18,10 +21,22 @@
 namespace Config {
     // 'constexpr' tells the compiler this value is known at compile-time.
     // It is more efficient than 'const' and safer than '#define'.
+
     constexpr int ButtonPin = 47;
     constexpr int LedPin    = 2;
     constexpr int StrobPin  = 48;
     constexpr int PanicPin  = 45;
+
+    // New OLED Pins
+    constexpr int OLED_CS  = 10;
+    constexpr int OLED_MOSI = 11;
+    constexpr int OLED_SCLK = 12;
+    constexpr int OLED_DC   = 13;
+    constexpr int OLED_RST  = 14;
+
+    // Display Dimensions
+    constexpr int ScreenWidth  = 128;
+    constexpr int ScreenHeight = 128;
 
     // WiFi Credentials using std::string_view
     // This is C++17's way to point to a string without copying it into memory.
@@ -59,6 +74,9 @@ void handleRoot();                      // Function that serves the HTML page
 void handleReset();                     // New function to clear NVS
 // Helper function to determine signal color based on RSSI
 std::string_view getSignalColor(int rssi);  
+
+// Initialize the display
+Adafruit_SSD1351 tft = Adafruit_SSD1351(Config::ScreenWidth, Config::ScreenHeight, &SPI, Config::OLED_CS, Config::OLED_DC, Config::OLED_RST);
 
 void setup() {
     delay(1000);
@@ -117,6 +135,17 @@ void setup() {
     pinMode(Config::PanicPin,  OUTPUT);
     pinMode(Config::LedPin,    OUTPUT);
 
+    // Initialize SPI with our custom pins
+    SPI.begin(Config::OLED_SCLK, -1, Config::OLED_MOSI, Config::OLED_CS);
+    
+    // Initialize OLED display
+    tft.begin();
+    tft.fillScreen(0x0000); // Clear to black
+    tft.setCursor(0, 5);
+    tft.setTextColor(0x07FF); // Cyan color to match your Web UI
+    tft.print("S3 MONITOR ACTIVE");
+
+    // Activate ISR
     attachInterrupt(digitalPinToInterrupt(Config::ButtonPin), handleButtonInterrupt, FALLING);
 
     // --- Task Distribution ---
