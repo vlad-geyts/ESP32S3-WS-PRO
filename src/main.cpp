@@ -36,7 +36,7 @@ namespace Config {
 
     // Login to reset "Panic Counter"
     constexpr char* www_username = "admin";
-    constexpr char* www_password = "password123";
+    constexpr char* www_password = "pass";
 }
 
 // Global Objects
